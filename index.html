@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Master Wiki</title>
+  <meta name="description" content="Relie deux articles Wikipédia en suivant uniquement les liens, le plus vite possible.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧭</text></svg>">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- ======================= ACCUEIL ======================= -->
+  <section id="screen-menu" class="screen active">
+    <header class="menu-header">
+      <h1 class="logo">Master<span>Wiki</span></h1>
+      <p class="tagline">Relie deux articles Wikipédia en ne cliquant que sur les liens.</p>
+      <div class="menu-tools">
+        <select id="lang-select" aria-label="Langue de Wikipédia">
+          <option value="fr">🇫🇷 Wikipédia FR</option>
+          <option value="en">🇬🇧 Wikipedia EN</option>
+        </select>
+        <button class="icon-btn" id="theme-toggle" title="Thème clair / sombre">🌓</button>
+        <button class="icon-btn" id="stats-btn" title="Statistiques">📊</button>
+      </div>
+    </header>
+
+    <div class="card setup">
+      <h2>Mode de jeu</h2>
+      <div class="segmented" id="mode-select">
+        <button data-mode="classic" class="selected"><b>Classique</b><small>Temps + clics</small></button>
+        <button data-mode="timed"><b>Chrono</b><small>3 minutes max</small></button>
+        <button data-mode="clicks"><b>Économe</b><small>8 clics max</small></button>
+        <button data-mode="daily"><b>Défi du jour</b><small>Même partie pour tous</small></button>
+      </div>
+
+      <h2>Difficulté</h2>
+      <div class="segmented" id="difficulty-select">
+        <button data-diff="easy" class="selected"><b>Facile</b><small>Articles connus</small></button>
+        <button data-diff="medium"><b>Moyen</b><small>Départ aléatoire</small></button>
+        <button data-diff="hard"><b>Difficile</b><small>Tout aléatoire</small></button>
+      </div>
+
+      <h2>Options</h2>
+      <div class="options">
+        <label class="switch"><input type="checkbox" id="opt-noback"><span></span> Interdire le retour arrière</label>
+        <label class="switch"><input type="checkbox" id="opt-hints" checked><span></span> Autoriser les indices</label>
+        <label class="switch"><input type="checkbox" id="opt-prefetch" checked><span></span> Préchargement au survol (plus fluide)</label>
+      </div>
+
+      <details class="custom">
+        <summary>Choisir les articles soi-même</summary>
+        <div class="custom-fields">
+          <div class="field">
+            <label for="custom-start">Départ</label>
+            <input id="custom-start" autocomplete="off" placeholder="Ex : Pizza">
+            <ul class="suggestions" data-for="custom-start"></ul>
+          </div>
+          <div class="field">
+            <label for="custom-target">Arrivée</label>
+            <input id="custom-target" autocomplete="off" placeholder="Ex : Lune">
+            <ul class="suggestions" data-for="custom-target"></ul>
+          </div>
+        </div>
+      </details>
+
+      <div class="preview" id="preview" hidden>
+        <div class="preview-item" id="preview-start"></div>
+        <div class="preview-arrow">➜</div>
+        <div class="preview-item" id="preview-target"></div>
+      </div>
+
+      <div class="setup-actions">
+        <button class="btn ghost" id="reroll-btn" title="Tirer d'autres articles">🎲 Nouveaux articles</button>
+        <button class="btn primary" id="play-btn">Jouer</button>
+      </div>
+      <p class="kbd-help">Raccourcis en jeu : <kbd>/</kbd> chercher un lien · <kbd>H</kbd> indice · <kbd>Alt</kbd>+<kbd>←</kbd> retour · <kbd>Échap</kbd> abandon</p>
+    </div>
+  </section>
+
+  <!-- ======================= JEU ======================= -->
+  <section id="screen-game" class="screen">
+    <header class="hud">
+      <button class="icon-btn" id="quit-btn" title="Abandonner (Échap)">✕</button>
+      <div class="hud-target" id="hud-target" title="Voir la cible">
+        <span class="hud-label">Cible</span>
+        <span class="hud-target-title" id="hud-target-title">…</span>
+      </div>
+      <div class="hud-stats">
+        <div class="stat"><span class="stat-value" id="hud-time">0:00</span><span class="stat-label" id="hud-time-label">temps</span></div>
+        <div class="stat"><span class="stat-value" id="hud-clicks">0</span><span class="stat-label" id="hud-clicks-label">clics</span></div>
+      </div>
+      <div class="hud-actions">
+        <button class="icon-btn" id="back-btn" title="Article précédent (Alt+←)">↩</button>
+        <button class="icon-btn" id="find-btn" title="Chercher un lien (/)">🔎</button>
+        <button class="icon-btn" id="hint-btn" title="Indice (H)">💡</button>
+      </div>
+      <div class="progress" id="time-progress"><div></div></div>
+    </header>
+
+    <nav class="breadcrumb" id="breadcrumb" aria-label="Chemin parcouru"></nav>
+
+    <div class="game-layout">
+      <main class="article-wrap" id="article-wrap">
+        <div class="loader" id="loader"><div class="spinner"></div></div>
+        <article class="article" id="article"></article>
+      </main>
+      <aside class="side" id="side">
+        <div class="card target-card" id="target-card"></div>
+        <div class="card hint-card" id="hint-card" hidden></div>
+      </aside>
+    </div>
+
+    <div class="finder" id="finder" hidden>
+      <input id="finder-input" placeholder="Filtrer les liens de la page…" autocomplete="off">
+      <ul id="finder-list"></ul>
+      <p class="finder-help"><kbd>↑</kbd><kbd>↓</kbd> choisir · <kbd>Entrée</kbd> suivre · <kbd>Échap</kbd> fermer</p>
+    </div>
+  </section>
+
+  <!-- ======================= FIN ======================= -->
+  <section id="screen-end" class="screen">
+    <div class="card end-card">
+      <div class="end-emoji" id="end-emoji">🏆</div>
+      <h2 id="end-title">Victoire !</h2>
+      <p id="end-subtitle"></p>
+      <div class="end-stats">
+        <div><span id="end-time">0:00</span><small>temps</small></div>
+        <div><span id="end-clicks">0</span><small>clics</small></div>
+        <div><span id="end-score">0</span><small>score</small></div>
+      </div>
+      <p class="end-record" id="end-record" hidden>🎉 Nouveau record personnel !</p>
+      <h3>Ton chemin</h3>
+      <ol class="end-path" id="end-path"></ol>
+      <div class="setup-actions">
+        <button class="btn ghost" id="share-btn">📋 Partager</button>
+        <button class="btn ghost" id="replay-btn">🔁 Rejouer</button>
+        <button class="btn primary" id="menu-btn">Nouvelle partie</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= STATS ======================= -->
+  <dialog id="stats-dialog">
+    <h2>Statistiques</h2>
+    <div class="end-stats" id="stats-summary"></div>
+    <h3>Dernières parties</h3>
+    <ul class="history" id="history-list"></ul>
+    <div class="setup-actions">
+      <button class="btn ghost" id="reset-stats">Effacer</button>
+      <button class="btn primary" id="close-stats">Fermer</button>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast"></div>
+  <canvas id="confetti"></canvas>
+
+  <script src="js/data.js"></script>
+  <script src="js/wiki.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
